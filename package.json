@@ -1,0 +1,22 @@
+{
+  "name": "portal-escolar",
+  "version": "1.0.0",
+  "description": "Portal para visualização de notas escolares",
+  "scripts": {
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "backend:dev": "cd backend && npm run dev",
+    "frontend:dev": "cd frontend && ng serve",
+    "backend:install": "cd backend && npm install",
+    "frontend:install": "cd frontend && npm install",
+    "scripts:install": "cd scripts && npm install",
+    "install-all": "npm run backend:install && npm run frontend:install && npm run scripts:install",
+    "build": "cd backend && npm run build && cd ../frontend && ng build",
+    "db:up": "docker-compose up -d",
+    "db:down": "docker-compose down",
+    "db:logs": "docker-compose logs postgres",
+    "cadastrar-aluno": "cd scripts && npm install && node cadastrar-aluno.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

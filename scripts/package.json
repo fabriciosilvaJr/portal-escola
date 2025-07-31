@@ -1,0 +1,16 @@
+{
+  "name": "portal-escolar-scripts",
+  "version": "1.0.0",
+  "description": "Scripts utilitários para o Portal Escolar",
+  "main": "cadastrar-aluno.js",
+  "scripts": {
+    "cadastrar": "node cadastrar-aluno.js"
+  },
+  "dependencies": {
+    "pg": "^8.11.3",
+    "bcryptjs": "^2.4.3"
+  },
+  "keywords": ["portal", "escolar", "aluno", "cadastro"],
+  "author": "",
+  "license": "MIT"
+}
