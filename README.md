@@ -23,16 +23,16 @@ Sistema de portal escolar para visualização de notas desenvolvido com NodeJS, 
 
 - **Backend**: Node.js, TypeScript, Express, PostgreSQL
 - **Frontend**: Angular 17, TailwindCSS
-- **Banco**: PostgreSQL
+- **Banco**: PostgreSQL (via Docker)
 - **Autenticação**: JWT
 
 ## 📋 Pré-requisitos
 
 - Node.js (versão 18 ou superior)
-- PostgreSQL (versão 12 ou superior)
+- Docker e Docker Compose
 - npm ou yarn
 
-## 🚀 Instalação
+## 🚀 Instalação e Execução
 
 ### 1. Clone o repositório
 ```bash
@@ -45,24 +45,30 @@ cd portal-escolar
 npm run install-all
 ```
 
-### 3. Configure o banco de dados
+### 3. Suba o banco de dados
 ```bash
-# Execute o script SQL no PostgreSQL
-psql -U postgres -f database/init.sql
+docker-compose up -d
 ```
 
-### 4. Configure as variáveis de ambiente
-Copie o arquivo `.env` no backend e ajuste as configurações:
-```bash
-cp backend/.env.example backend/.env
-```
+> ⚠️ **Importante:** Se o banco já existia de uma tentativa anterior e as tabelas não foram criadas, derrube o volume e recrie:
+> ```bash
+> docker-compose down -v
+> docker-compose up -d
+> ```
 
-### 5. Execute o projeto
+### 4. Inicie o backend
 ```bash
-npm run dev
+npm run backend:dev
 ```
 
 O backend estará rodando em `http://localhost:3000`
+
+### 5. Inicie o frontend (em outro terminal)
+```bash
+cd frontend
+npm run dev
+```
+
 O frontend estará rodando em `http://localhost:4200`
 
 ## 🔐 Usuários de Teste
@@ -75,6 +81,18 @@ O frontend estará rodando em `http://localhost:4200`
 - **Matrícula**: 2024001 | **Senha**: 123456
 - **Matrícula**: 2024002 | **Senha**: 123456
 - **Matrícula**: 2024003 | **Senha**: 123456
+
+## ✅ Verificando se o banco foi criado corretamente
+
+```bash
+docker exec -it portal_escolar_db psql -U postgres -d portal_escolar -c "\dt"
+```
+
+Deve listar as tabelas `usuarios` e `notas`. Para ver os usuários de teste:
+
+```bash
+docker exec -it portal_escolar_db psql -U postgres -d portal_escolar -c "SELECT matricula, tipo_usuario FROM usuarios;"
+```
 
 ## 📊 Formato do CSV
 
@@ -118,6 +136,7 @@ portal-escolar/
 │   └── package.json
 ├── database/
 │   └── init.sql             # Script de inicialização do BD
+├── docker-compose.yml       # Configuração do banco PostgreSQL
 └── package.json             # Scripts de desenvolvimento
 ```
 
@@ -135,37 +154,17 @@ portal-escolar/
 - `GET /api/notas/admin/anos` - Listar anos disponíveis (Admin)
 - `GET /api/notas/minhas` - Notas do aluno logado
 
-## 🎯 Funcionalidades Implementadas
-
-- [x] Sistema de autenticação JWT
-- [x] Upload de CSV com validação
-- [x] INSERT/UPDATE automático baseado em matrícula + ano
-- [x] Dashboard administrativo com paginação e filtros
-- [x] Paginação server-side (LIMIT/OFFSET)
-- [x] Filtro por ano letivo
-- [x] Busca por matrícula com debounce
-- [x] Dashboard do aluno com gráficos
-- [x] Cards de melhor/pior disciplina
-- [x] Responsividade completa
-- [x] Tratamento de erros
-- [x] Guards de rota
-- [x] Interceptors HTTP
-- [x] Seeder com Faker.js para dados de teste
-
 ## 🔧 Scripts Disponíveis
 
 ```bash
-# Desenvolvimento (roda backend e frontend simultaneamente)
-npm run dev
-
-# Instalar dependências de ambos os projetos
+# Instalar dependências de todos os projetos
 npm run install-all
 
 # Executar apenas o backend
 npm run backend:dev
 
-# Executar apenas o frontend
-npm run frontend:dev
+# Executar apenas o frontend (dentro da pasta frontend/)
+npm run dev
 
 # Build de produção
 npm run build
@@ -177,21 +176,6 @@ npm run cadastrar-aluno
 npm run seed -- --ano-inicio=2023 --ano-fim=2025
 npm run seed -- --ano-inicio=2023 --ano-fim=2025 --seed=42
 ```
-
-## 📱 Responsividade
-
-O sistema é totalmente responsivo e funciona em:
-- Desktop
-- Tablet
-- Mobile
-
-## 🛡️ Segurança
-
-- Autenticação JWT
-- Senhas criptografadas com bcrypt
-- Guards de rota no frontend
-- Middleware de autenticação no backend
-- Validação de tipos de usuário
 
 ## 🌱 Seeder - Geração de Dados de Teste
 
@@ -216,18 +200,24 @@ npm run seed -- --ano-inicio=2023 --ano-fim=2025
 - Total: 100 alunos × (anoFim - anoInicio + 1) registros de notas
 - Senha padrão: `123456` (hash bcrypt)
 
-### Exemplo:
-```bash
-# Gerar alunos de 2023 a 2025 (300 registros de notas)
-npm run seed -- --ano-inicio=2023 --ano-fim=2025
-
-# Usar seed diferente para dados diferentes
-npm run seed -- --ano-inicio=2024 --ano-fim=2024 --seed=7
-```
-
 Após executar, importe o arquivo `seed-notas.csv` pelo dashboard do admin.
 
 **Nota:** O arquivo `seed-notas.csv` é adicionado ao `.gitignore` e não é versionado.
+
+## 📱 Responsividade
+
+O sistema é totalmente responsivo e funciona em:
+- Desktop
+- Tablet
+- Mobile
+
+## 🛡️ Segurança
+
+- Autenticação JWT
+- Senhas criptografadas com bcrypt
+- Guards de rota no frontend
+- Middleware de autenticação no backend
+- Validação de tipos de usuário
 
 ## 📈 Melhorias Futuras
 
