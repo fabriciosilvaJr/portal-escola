@@ -14,7 +14,8 @@
     "db:up": "docker-compose up -d",
     "db:down": "docker-compose down",
     "db:logs": "docker-compose logs postgres",
-    "cadastrar-aluno": "cd scripts && npm install && node cadastrar-aluno.js"
+    "cadastrar-aluno": "cd scripts && npm install && node cadastrar-aluno.js",
+    "seed": "cd scripts && npm install && node seeder.js"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

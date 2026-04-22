@@ -4,11 +4,15 @@
   "description": "Scripts utilitários para o Portal Escolar",
   "main": "cadastrar-aluno.js",
   "scripts": {
-    "cadastrar": "node cadastrar-aluno.js"
+    "cadastrar": "node cadastrar-aluno.js",
+    "seed": "node seeder.js"
   },
   "dependencies": {
     "pg": "^8.11.3",
     "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "@faker-js/faker": "^8.4.1"
   },
   "keywords": ["portal", "escolar", "aluno", "cadastro"],
   "author": "",

@@ -6,7 +6,10 @@ Sistema de portal escolar para visualização de notas desenvolvido com NodeJS, 
 
 ### Para Administradores:
 - ✅ Upload de notas via CSV
-- ✅ Visualização de todas as notas dos alunos
+- ✅ Visualização de todas as notas dos alunos com paginação
+- ✅ Filtro por ano letivo
+- ✅ Busca por matrícula (parcial)
+- ✅ Controle de registros por página (10/25/50)
 - ✅ Atualização automática de notas (INSERT/UPDATE baseado em matrícula + ano)
 
 ### Para Alunos/Pais:
@@ -109,6 +112,10 @@ portal-escolar/
 │   │   │   └── interceptors/# Interceptors HTTP
 │   │   └── styles.css       # Estilos globais
 │   └── package.json
+├── scripts/
+│   ├── cadastrar-aluno.js   # Script para cadastrar alunos manualmente
+│   ├── seeder.js            # Seeder com Faker para dados de teste
+│   └── package.json
 ├── database/
 │   └── init.sql             # Script de inicialização do BD
 └── package.json             # Scripts de desenvolvimento
@@ -122,7 +129,10 @@ portal-escolar/
 
 ### Notas
 - `POST /api/notas/upload` - Upload CSV (Admin)
-- `GET /api/notas/admin/todas` - Listar todas notas (Admin)
+- `GET /api/notas/admin/todas` - Listar notas com paginação (Admin)
+  - Query params: `page`, `pageSize`, `ano` (opcional), `matricula` (opcional)
+  - Retorna: `{ data, total, page, pageSize, totalPages }`
+- `GET /api/notas/admin/anos` - Listar anos disponíveis (Admin)
 - `GET /api/notas/minhas` - Notas do aluno logado
 
 ## 🎯 Funcionalidades Implementadas
@@ -130,13 +140,17 @@ portal-escolar/
 - [x] Sistema de autenticação JWT
 - [x] Upload de CSV com validação
 - [x] INSERT/UPDATE automático baseado em matrícula + ano
-- [x] Dashboard administrativo
+- [x] Dashboard administrativo com paginação e filtros
+- [x] Paginação server-side (LIMIT/OFFSET)
+- [x] Filtro por ano letivo
+- [x] Busca por matrícula com debounce
 - [x] Dashboard do aluno com gráficos
 - [x] Cards de melhor/pior disciplina
 - [x] Responsividade completa
 - [x] Tratamento de erros
 - [x] Guards de rota
 - [x] Interceptors HTTP
+- [x] Seeder com Faker.js para dados de teste
 
 ## 🔧 Scripts Disponíveis
 
@@ -155,6 +169,13 @@ npm run frontend:dev
 
 # Build de produção
 npm run build
+
+# Cadastrar novo aluno manualmente
+npm run cadastrar-aluno
+
+# Gerar dados de teste com seeder
+npm run seed -- --ano-inicio=2023 --ano-fim=2025
+npm run seed -- --ano-inicio=2023 --ano-fim=2025 --seed=42
 ```
 
 ## 📱 Responsividade
@@ -172,14 +193,50 @@ O sistema é totalmente responsivo e funciona em:
 - Middleware de autenticação no backend
 - Validação de tipos de usuário
 
+## 🌱 Seeder - Geração de Dados de Teste
+
+O projeto inclui um seeder para facilitar testes com volume realista de dados.
+
+### Como usar:
+
+```bash
+npm run seed -- --ano-inicio=2023 --ano-fim=2025
+```
+
+### Parâmetros:
+- `--ano-inicio`: Ano inicial (obrigatório)
+- `--ano-fim`: Ano final (obrigatório, >= ano-inicio)
+- `--seed`: Seed para reproduzibilidade (opcional, padrão: 42)
+
+### O que o seeder faz:
+- Gera **100 alunos únicos** com dados realistas (faker pt-BR)
+- Matriculas no formato `{anoInicio}{001-100}` (7 dígitos)
+- Insere alunos no banco (idempotente - `ON CONFLICT DO NOTHING`)
+- Cria arquivo `seed-notas.csv` na raiz com notas para todos os anos
+- Total: 100 alunos × (anoFim - anoInicio + 1) registros de notas
+- Senha padrão: `123456` (hash bcrypt)
+
+### Exemplo:
+```bash
+# Gerar alunos de 2023 a 2025 (300 registros de notas)
+npm run seed -- --ano-inicio=2023 --ano-fim=2025
+
+# Usar seed diferente para dados diferentes
+npm run seed -- --ano-inicio=2024 --ano-fim=2024 --seed=7
+```
+
+Após executar, importe o arquivo `seed-notas.csv` pelo dashboard do admin.
+
+**Nota:** O arquivo `seed-notas.csv` é adicionado ao `.gitignore` e não é versionado.
+
 ## 📈 Melhorias Futuras
 
-- [ ] Paginação na tabela de notas
-- [ ] Filtros por ano/disciplina
 - [ ] Gráficos mais avançados
-- [ ] Exportação de relatórios
+- [ ] Exportação de relatórios em PDF/Excel
 - [ ] Sistema de notificações
 - [ ] PWA (Progressive Web App)
+- [ ] Histórico de alterações de notas
+- [ ] Comentários do professor por disciplina
 
 ## 🤝 Contribuição
 

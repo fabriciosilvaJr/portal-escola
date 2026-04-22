@@ -1,12 +1,15 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Subject, Subscription } from 'rxjs';
+import { debounceTime, distinctUntilChanged } from 'rxjs/operators';
 import { AuthService } from '../../services/auth.service';
 import { NotasService, NotasAluno } from '../../services/notas.service';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   template: `
     <div class="min-h-screen bg-gray-50">
       <!-- Header -->
@@ -75,7 +78,7 @@ import { NotasService, NotasAluno } from '../../services/notas.service';
         <div class="px-4 py-6 sm:px-0">
           <div class="bg-white shadow overflow-hidden sm:rounded-md">
             <div class="px-4 py-5 sm:px-6">
-              <h3 class="text-lg leading-6 font-medium text-gray-900">
+              <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">
                 Todas as Notas
                 <button
                   (click)="loadNotas()"
@@ -84,6 +87,49 @@ import { NotasService, NotasAluno } from '../../services/notas.service';
                   Atualizar
                 </button>
               </h3>
+
+              <!-- Filtros -->
+              <div class="flex flex-wrap gap-4 items-center">
+                <div class="flex items-center gap-2">
+                  <label class="text-sm font-medium text-gray-700">Ano:</label>
+                  <select
+                    [(ngModel)]="anoFiltro"
+                    (ngModelChange)="onAnoChange()"
+                    class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                  >
+                    <option [ngValue]="null">Todos</option>
+                    <option *ngFor="let ano of anosDisponiveis" [ngValue]="ano">{{ ano }}</option>
+                  </select>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <label class="text-sm font-medium text-gray-700">Matrícula:</label>
+                  <input
+                    type="text"
+                    [(ngModel)]="matriculaFiltro"
+                    (ngModelChange)="onMatriculaChange()"
+                    placeholder="Buscar por matrícula"
+                    class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                  />
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <label class="text-sm font-medium text-gray-700">Registros por página:</label>
+                  <select
+                    [(ngModel)]="pageSize"
+                    (ngModelChange)="onPageSizeChange()"
+                    class="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm"
+                  >
+                    <option [ngValue]="10">10</option>
+                    <option [ngValue]="25">25</option>
+                    <option [ngValue]="50">50</option>
+                  </select>
+                </div>
+
+                <div class="text-sm text-gray-600">
+                  Total: {{ total }} registro(s)
+                </div>
+              </div>
             </div>
 
             <div *ngIf="isLoading" class="px-4 py-5 text-center">
@@ -136,13 +182,38 @@ import { NotasService, NotasAluno } from '../../services/notas.service';
                 </tbody>
               </table>
             </div>
+
+            <!-- Paginação -->
+            <div *ngIf="!isLoading && totalPages > 1" class="px-4 py-3 border-t border-gray-200 bg-gray-50">
+              <div class="flex items-center justify-between">
+                <div class="text-sm text-gray-700">
+                  Página {{ page }} de {{ totalPages }}
+                </div>
+                <div class="flex gap-2">
+                  <button
+                    (click)="previousPage()"
+                    [disabled]="page === 1"
+                    class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Anterior
+                  </button>
+                  <button
+                    (click)="nextPage()"
+                    [disabled]="page === totalPages"
+                    class="px-3 py-1 text-sm bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  >
+                    Próxima
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </main>
     </div>
   `
 })
-export class AdminDashboardComponent implements OnInit {
+export class AdminDashboardComponent implements OnInit, OnDestroy {
   currentUser = this.authService.getCurrentUser();
   notas: NotasAluno[] = [];
   selectedFile: File | null = null;
@@ -151,27 +222,107 @@ export class AdminDashboardComponent implements OnInit {
   uploadMessage = '';
   uploadSuccess = false;
 
+  page = 1;
+  pageSize = 10;
+  totalPages = 0;
+  total = 0;
+  anoFiltro: number | null = null;
+  anosDisponiveis: number[] = [];
+  matriculaFiltro = '';
+  private matricula$ = new Subject<string>();
+  private matriculaSubscription?: Subscription;
+  private scrollPosition = 0;
+
   constructor(
     private authService: AuthService,
     private notasService: NotasService
   ) {}
 
   ngOnInit(): void {
+    this.loadAnos();
     this.loadNotas();
+    
+    this.matriculaSubscription = this.matricula$.pipe(
+      debounceTime(300),
+      distinctUntilChanged()
+    ).subscribe(() => {
+      this.page = 1;
+      this.loadNotas();
+    });
   }
 
-  loadNotas(): void {
+  ngOnDestroy(): void {
+    this.matriculaSubscription?.unsubscribe();
+  }
+
+  onMatriculaChange(): void {
+    this.matricula$.next(this.matriculaFiltro);
+  }
+
+  loadAnos(): void {
+    this.notasService.getAnosDisponiveis().subscribe({
+      next: (anos) => {
+        this.anosDisponiveis = anos;
+      },
+      error: (error) => {
+        console.error('Erro ao carregar anos:', error);
+      }
+    });
+  }
+
+  loadNotas(preserveScroll = false): void {
+    if (preserveScroll) {
+      this.scrollPosition = window.pageYOffset || document.documentElement.scrollTop;
+    }
+    
     this.isLoading = true;
-    this.notasService.getTodasNotas().subscribe({
-      next: (notas) => {
-        this.notas = notas;
+    this.notasService.getTodasNotas(
+      this.page, 
+      this.pageSize, 
+      this.anoFiltro || undefined,
+      this.matriculaFiltro || undefined
+    ).subscribe({
+      next: (response) => {
+        this.notas = response.data;
+        this.total = response.total;
+        this.totalPages = response.totalPages;
         this.isLoading = false;
+        
+        if (preserveScroll) {
+          setTimeout(() => {
+            window.scrollTo(0, this.scrollPosition);
+          }, 0);
+        }
       },
       error: (error) => {
         console.error('Erro ao carregar notas:', error);
         this.isLoading = false;
       }
     });
+  }
+
+  onAnoChange(): void {
+    this.page = 1;
+    this.loadNotas();
+  }
+
+  onPageSizeChange(): void {
+    this.page = 1;
+    this.loadNotas();
+  }
+
+  previousPage(): void {
+    if (this.page > 1) {
+      this.page--;
+      this.loadNotas(true);
+    }
+  }
+
+  nextPage(): void {
+    if (this.page < this.totalPages) {
+      this.page++;
+      this.loadNotas(true);
+    }
   }
 
   onFileSelected(event: any): void {
@@ -198,7 +349,8 @@ export class AdminDashboardComponent implements OnInit {
         this.uploadSuccess = true;
         this.uploadMessage = `CSV processado com sucesso! ${response.processados} registros processados (${response.inseridos} inseridos, ${response.atualizados} atualizados)`;
         this.selectedFile = null;
-        this.loadNotas(); // Recarregar a tabela
+        this.loadAnos();
+        this.loadNotas();
       },
       error: (error) => {
         this.isUploading = false;

@@ -118,19 +118,78 @@ router.post('/upload', authenticateToken, requireAdmin, upload.single('csv'), as
   }
 });
 
-// Listar todas as notas (admin)
+// Listar todas as notas (admin) com paginação e filtros
 router.get('/admin/todas', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
   try {
-    const result = await pool.query(`
-      SELECT n.*, u.nome 
-      FROM notas_alunos n
-      LEFT JOIN usuarios u ON n.matricula = u.matricula
-      ORDER BY n.ano DESC, n.matricula
-    `);
-
-    res.json(result.rows);
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize as string) || 10));
+    const ano = req.query.ano ? parseInt(req.query.ano as string) : null;
+    const matricula = req.query.matricula ? (req.query.matricula as string).trim() : null;
+    
+    const offset = (page - 1) * pageSize;
+    
+    const whereClauses: string[] = [];
+    const queryParams: any[] = [];
+    let paramIndex = 1;
+    
+    if (ano && !isNaN(ano)) {
+      whereClauses.push(`n.ano = $${paramIndex}`);
+      queryParams.push(ano);
+      paramIndex++;
+    }
+    
+    if (matricula && matricula.length > 0) {
+      whereClauses.push(`n.matricula ILIKE $${paramIndex}`);
+      queryParams.push(`%${matricula}%`);
+      paramIndex++;
+    }
+    
+    const whereClause = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
+    
+    const [countResult, dataResult] = await Promise.all([
+      pool.query(`
+        SELECT COUNT(*) as total
+        FROM notas_alunos n
+        ${whereClause}
+      `, queryParams),
+      pool.query(`
+        SELECT n.*, u.nome 
+        FROM notas_alunos n
+        LEFT JOIN usuarios u ON n.matricula = u.matricula
+        ${whereClause}
+        ORDER BY n.ano DESC, n.matricula
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `, [...queryParams, pageSize, offset])
+    ]);
+    
+    const total = parseInt(countResult.rows[0].total);
+    const totalPages = Math.ceil(total / pageSize);
+    
+    res.json({
+      data: dataResult.rows,
+      total,
+      page,
+      pageSize,
+      totalPages
+    });
   } catch (error) {
     console.error('Erro ao buscar notas:', error);
+    res.status(500).json({ message: 'Erro interno do servidor' });
+  }
+});
+
+// Listar anos disponíveis (admin)
+router.get('/admin/anos', authenticateToken, requireAdmin, async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await pool.query(`
+      SELECT DISTINCT ano 
+      FROM notas_alunos 
+      ORDER BY ano DESC
+    `);
+    
+    res.json(result.rows.map(row => row.ano));
+  } catch (error) {
+    console.error('Erro ao buscar anos:', error);
     res.status(500).json({ message: 'Erro interno do servidor' });
   }
 });

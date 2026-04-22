@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 export interface NotasAluno {
@@ -21,6 +21,14 @@ export interface NotasAluno {
   created_at: Date;
   updated_at: Date;
   nome?: string;
+}
+
+export interface PaginatedNotas {
+  data: NotasAluno[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
 }
 
 export interface NotasComAnalise {
@@ -53,8 +61,24 @@ export class NotasService {
     return this.http.post(`${this.apiUrl}/upload`, formData);
   }
 
-  getTodasNotas(): Observable<NotasAluno[]> {
-    return this.http.get<NotasAluno[]>(`${this.apiUrl}/admin/todas`);
+  getTodasNotas(page: number, pageSize: number, ano?: number, matricula?: string): Observable<PaginatedNotas> {
+    let params = new HttpParams()
+      .set('page', page.toString())
+      .set('pageSize', pageSize.toString());
+    
+    if (ano !== undefined && ano !== null) {
+      params = params.set('ano', ano.toString());
+    }
+    
+    if (matricula && matricula.trim().length > 0) {
+      params = params.set('matricula', matricula.trim());
+    }
+    
+    return this.http.get<PaginatedNotas>(`${this.apiUrl}/admin/todas`, { params });
+  }
+
+  getAnosDisponiveis(): Observable<number[]> {
+    return this.http.get<number[]>(`${this.apiUrl}/admin/anos`);
   }
 
   getMinhasNotas(): Observable<NotasComAnalise[]> {
